@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 
-// ✅ Styling injection (Poppins + custom styles)
+// Inject party-style CSS
 const style = document.createElement("style");
 style.innerHTML = `
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
@@ -92,11 +92,8 @@ style.innerHTML = `
     box-shadow: 0 0 30px rgba(0, 230, 230, 0.4);
   }
 `;
-
 document.head.appendChild(style);
 
-// Azure + YouTube config
-const SAS_QUERY = "?sv=2024-11-04&ss=t&srt=sco&sp=rdau&se=2025-04-28T14:11:02Z&st=2025-04-21T06:11:02Z&spr=https&sig=X38uzQbzdrzO1Z7YAiJg9gbLDtc7FqT5Y5%2FJDkhaD6g%3D";
 const YOUTUBE_API_KEY = "AIzaSyBo7gcS43fBLDPbaq-IOTlR8RQTXLmZlJw";
 
 const SongQueue = () => {
@@ -107,7 +104,7 @@ const SongQueue = () => {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    clearSongs();
+    fetchSongs();
   }, []);
 
   useEffect(() => {
@@ -116,20 +113,14 @@ const SongQueue = () => {
     }
   }, [topVideoId]);
 
-  const clearSongs = async () => {
+  const fetchSongs = async () => {
     try {
-      const res = await axios.get(`/SongQueue()${SAS_QUERY}`);
-      const deletePromises = res.data.value.map((item) =>
-        axios.delete(
-          `/SongQueue(PartitionKey='${item.PartitionKey}',RowKey='${item.RowKey}')${SAS_QUERY}`,
-          { headers: { "If-Match": "*" } }
-        )
-      );
-      await Promise.all(deletePromises);
-      setSongs([]);
-      setTopVideoId(null);
+      const res = await axios.get("/api/getSongs");
+      const sorted = res.data.sort((a, b) => parseInt(b.votes) - parseInt(a.votes));
+      setSongs(sorted);
+      updateTopVideo(sorted[0]);
     } catch (err) {
-      console.error("Error clearing songs:", err);
+      console.error("Error fetching songs:", err);
     }
   };
 
@@ -137,43 +128,12 @@ const SongQueue = () => {
     if (!topSong) return;
     const query = `${topSong.title} ${topSong.artist}`;
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`;
-
     try {
       const ytRes = await axios.get(searchUrl);
       const videoId = ytRes.data.items[0]?.id?.videoId;
       setTopVideoId(videoId);
-    } catch (ytErr) {
-      console.error("YouTube API error:", ytErr);
-    }
-  };
-
-  const handleVote = async (index) => {
-    const song = songs[index];
-
-    const updatedEntity = {
-      PartitionKey: song.partitionKey,
-      RowKey: song.rowKey,
-      Title: song.title,
-      Artist: song.artist,
-      Votes: song.votes + 1,
-    };
-
-    try {
-      const updateUrl = `/SongQueue(PartitionKey='${song.partitionKey}',RowKey='${song.rowKey}')${SAS_QUERY}`;
-      await axios.put(updateUrl, updatedEntity, {
-        headers: {
-          "Content-Type": "application/json",
-          "If-Match": "*",
-        },
-      });
-
-      const updatedSongs = [...songs];
-      updatedSongs[index].votes += 1;
-      updatedSongs.sort((a, b) => parseInt(b.votes) - parseInt(a.votes));
-      setSongs(updatedSongs);
-      updateTopVideo(updatedSongs[0]);
     } catch (err) {
-      console.error("Error updating vote:", err);
+      console.error("YouTube API error:", err);
     }
   };
 
@@ -181,40 +141,44 @@ const SongQueue = () => {
     e.preventDefault();
     if (!newTitle || !newArtist) return;
 
-    const newRowKey = Date.now().toString();
     const newSong = {
       PartitionKey: "default",
-      RowKey: newRowKey,
+      RowKey: Date.now().toString(),
       Title: newTitle,
       Artist: newArtist,
       Votes: 0,
     };
 
     try {
-      await axios.post(`/SongQueue${SAS_QUERY}`, newSong, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const updatedSongs = [
-        ...songs,
-        {
-          title: newTitle,
-          artist: newArtist,
-          votes: 0,
-          rowKey: newRowKey,
-          partitionKey: "default",
-        },
-      ];
-
-      updatedSongs.sort((a, b) => parseInt(b.votes) - parseInt(a.votes));
-      setSongs(updatedSongs);
+      await axios.post("/api/addSong", newSong);
       setNewTitle("");
       setNewArtist("");
-      updateTopVideo(updatedSongs[0]);
+      fetchSongs();
     } catch (err) {
       console.error("Error adding song:", err);
+    }
+  };
+
+  const handleVote = async (index) => {
+    const song = songs[index];
+    try {
+      await axios.post("/api/voteSong", {
+        RowKey: song.rowKey,
+        PartitionKey: song.partitionKey,
+      });
+      fetchSongs();
+    } catch (err) {
+      console.error("Error voting:", err);
+    }
+  };
+
+  const resetQueue = async () => {
+    try {
+      await axios.post("/api/resetSongs");
+      setSongs([]);
+      setTopVideoId(null);
+    } catch (err) {
+      console.error("Error resetting queue:", err);
     }
   };
 
@@ -222,7 +186,7 @@ const SongQueue = () => {
     <div>
       <h2 className="party-header">🎵 Song Queue Party 🎉</h2>
 
-      <button onClick={clearSongs} style={{ marginBottom: "1rem" }}>
+      <button onClick={resetQueue} style={{ marginBottom: "1rem" }}>
         🔄 Reset Queue
       </button>
 
@@ -234,7 +198,6 @@ const SongQueue = () => {
             height="315"
             src={`https://www.youtube.com/embed/${topVideoId}?autoplay=1`}
             title="Top Song"
-            frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>
@@ -273,7 +236,6 @@ const SongQueue = () => {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ marginLeft: "10px" }}
               >
                 ▶️ Watch
               </a>

@@ -4,32 +4,30 @@ const connectionString = process.env["TABLE_CONNECTION_STRING"];
 const tableName = "SongQueue";
 
 module.exports = async function (context, req) {
-  if (req.method !== "POST") {
-    return (context.res = { status: 405, body: "Only POST allowed" });
-  }
+  const { PartitionKey, RowKey } = req.body;
 
-  const { Title, Artist, PartitionKey, RowKey, Votes } = req.body;
-
-  if (!Title || !Artist || !PartitionKey || !RowKey) {
+  if (!PartitionKey || !RowKey) {
     return (context.res = {
       status: 400,
-      body: "Missing required fields",
+      body: "Missing PartitionKey or RowKey",
     });
   }
 
   try {
     const client = TableClient.fromConnectionString(connectionString, tableName);
-    await client.createEntity({ Title, Artist, PartitionKey, RowKey, Votes });
+    const entity = await client.getEntity(PartitionKey, RowKey);
+    entity.Votes += 1;
+    await client.updateEntity(entity, "Replace");
 
     context.res = {
       status: 200,
-      body: { message: "Song added!" },
+      body: { message: "Vote updated!" },
     };
   } catch (err) {
-    context.log(err.message);
+    context.log("Error updating vote:", err.message);
     context.res = {
       status: 500,
-      body: "Failed to add song",
+      body: "Failed to vote",
     };
   }
 };

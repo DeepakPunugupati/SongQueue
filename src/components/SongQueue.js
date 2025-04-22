@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 
 // Inject party-style CSS
@@ -103,27 +103,6 @@ const SongQueue = () => {
   const [topVideoId, setTopVideoId] = useState(null);
   const videoRef = useRef(null);
 
-  useEffect(() => {
-    fetchSongs();
-  }, []);
-
-  useEffect(() => {
-    if (topVideoId && videoRef.current) {
-      videoRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [topVideoId]);
-
-  const fetchSongs = async () => {
-    try {
-      const res = await axios.get("/api/getSongs");
-      const sorted = res.data.sort((a, b) => parseInt(b.votes) - parseInt(a.votes));
-      setSongs(sorted);
-      updateTopVideo(sorted[0]);
-    } catch (err) {
-      console.error("Error fetching songs:", err);
-    }
-  };
-
   const updateTopVideo = async (topSong) => {
     if (!topSong) return;
     const query = `${topSong.title} ${topSong.artist}`;
@@ -136,6 +115,27 @@ const SongQueue = () => {
       console.error("YouTube API error:", err);
     }
   };
+
+  const fetchSongs = useCallback(async () => {
+    try {
+      const res = await axios.get("/api/getSongs");
+      const sorted = res.data.sort((a, b) => parseInt(b.votes) - parseInt(a.votes));
+      setSongs(sorted);
+      updateTopVideo(sorted[0]);
+    } catch (err) {
+      console.error("Error fetching songs:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSongs();
+  }, [fetchSongs]);
+
+  useEffect(() => {
+    if (topVideoId && videoRef.current) {
+      videoRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [topVideoId]);
 
   const handleAddSong = async (e) => {
     e.preventDefault();

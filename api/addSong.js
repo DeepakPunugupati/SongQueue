@@ -4,29 +4,17 @@ const connectionString = process.env["TABLE_CONNECTION_STRING"];
 const tableName = "SongQueue";
 
 module.exports = async function (context, req) {
-  if (req.method !== "POST") {
-    return (context.res = { status: 405, body: "Only POST allowed" });
-  }
-
-  const { Title, Artist, PartitionKey, RowKey, Votes } = req.body;
-
-  if (!Title || !Artist || !PartitionKey || !RowKey) {
-    return (context.res = {
-      status: 400,
-      body: "Missing required fields",
-    });
-  }
-
   try {
     const client = TableClient.fromConnectionString(connectionString, tableName);
-    await client.createEntity({ Title, Artist, PartitionKey, RowKey, Votes });
+
+    const song = req.body;
+    await client.createEntity(song);
 
     context.res = {
       status: 200,
-      body: { message: "Song added!" },
+      body: { message: "Song added" },
     };
   } catch (err) {
-    context.log(err.message);
     context.res = {
       status: 500,
       body: "Failed to add song",

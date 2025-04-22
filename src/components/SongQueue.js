@@ -7,38 +7,59 @@ style.innerHTML = `
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
 
   body {
-    background: linear-gradient(135deg, #ff5f6d, #ffc371);
-    min-height: 100vh;
-    margin: 0;
+    background: radial-gradient(circle at top, #0f0f0f 0%, #1a1a1a 100%);
+    color: #f0f0f0;
     font-family: 'Poppins', sans-serif;
-    color: white;
-    text-align: center;
+    margin: 0;
     padding: 2rem;
-    transition: background 1s ease-in-out;
+    text-align: center;
+    min-height: 100vh;
   }
 
   .party-header {
-    font-size: 2.5rem;
+    font-size: 2.8rem;
     font-weight: bold;
-    animation: pulse 2s infinite;
-    text-shadow: 2px 2px 6px #000;
+    margin-bottom: 1rem;
+    color: #00e6e6;
+    text-shadow: 0 0 10px #00e6e6, 0 0 20px #00e6e6;
   }
 
   button {
-    background: #ff0066;
-    color: white;
+    background: #ff2d75;
     border: none;
-    padding: 10px 16px;
-    margin: 0 6px;
-    border-radius: 8px;
+    color: white;
+    padding: 10px 20px;
+    margin: 0.5rem;
+    border-radius: 30px;
+    font-size: 1rem;
     font-weight: bold;
+    box-shadow: 0 0 10px #ff2d75;
     cursor: pointer;
-    transition: transform 0.2s, background 0.3s;
+    transition: all 0.2s ease;
   }
 
   button:hover {
-    background: #ff3385;
+    background: #ff5c94;
+    box-shadow: 0 0 20px #ff5c94;
     transform: scale(1.05);
+  }
+
+  input {
+    padding: 12px 16px;
+    margin: 8px;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #f0f0f0;
+    font-size: 1rem;
+    width: 240px;
+    backdrop-filter: blur(5px);
+    outline: none;
+    transition: 0.3s ease-in-out;
+  }
+
+  input::placeholder {
+    color: #ccc;
   }
 
   ul {
@@ -47,30 +68,31 @@ style.innerHTML = `
   }
 
   li {
-    margin-bottom: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    margin: 1rem auto;
+    padding: 1rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 0 10px #111;
     font-size: 1.1rem;
-  }
-
-  input {
-    padding: 10px;
-    margin: 6px;
-    border: none;
-    border-radius: 6px;
-    font-size: 1rem;
+    backdrop-filter: blur(4px);
   }
 
   a {
-    color: #fff;
-    text-decoration: none;
+    color: #00e6e6;
     font-weight: bold;
+    text-decoration: none;
+    margin-left: 10px;
   }
 
-  @keyframes pulse {
-    0% { transform: scale(1); color: #fff; }
-    50% { transform: scale(1.05); color: #ffeb3b; }
-    100% { transform: scale(1); color: #fff; }
+  iframe {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 0 30px rgba(0, 230, 230, 0.4);
   }
 `;
+
 document.head.appendChild(style);
 
 // Azure + YouTube config
